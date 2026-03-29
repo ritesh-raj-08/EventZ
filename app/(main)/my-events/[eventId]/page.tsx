@@ -136,8 +136,8 @@ function EventDashboardContent({ eventId }: { eventId: Id<"events"> }) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Reactive queries - automatically update when data changes in Convex
-  const dashboardData = useQuery(api.events.getEventDashboard, { eventId });
-  const registrations = useQuery(api.registrations.getEventRegistrations, { eventId });
+  const { data: dashboardData } = useConvexQuery(api.events.getEventDashboard, { eventId });
+  const { data: registrations } = useConvexQuery(api.registrations.getEventRegistrations, { eventId });
   const { data: currentUser } = useConvexQuery(api.users.getCurrentUser);
 
   // Debug logging
