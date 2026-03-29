@@ -23,13 +23,15 @@ import { Button } from '@/components/ui/button';
 import { createLocationSlug } from '@/lib/location-utils';
 import EventCard from '@/components/event-card';
 import { CATEGORIES } from '@/lib/data';
+import { useOnboarding } from '@/hooks/use-onboarding';
+import OnboardingModal from '@/components/ui/onboarding-modal';
 
 
 
 const ExplorePage = () => {
 
-
   const { data: currentUser } = useConvexQuery<Doc<"users"> | null>(api.users.getCurrentUser);
+  const { showOnboarding, handleOnboardingComplete, handleOnboardingSkip } = useOnboarding();
 
   const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
 
@@ -312,6 +314,11 @@ const categoriesWithCounts = CATEGORIES.map((category) => ({
     </Card>
       )}
 
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleOnboardingSkip}
+        onComplete={handleOnboardingComplete}
+      />
     </>
   )
 }

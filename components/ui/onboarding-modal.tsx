@@ -26,26 +26,20 @@ import {
 } from "@/components/ui/select";
 import { CATEGORIES } from "@/lib/data";
 
-type OnboardingModalProps = {
+interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
-};
+}
 
-type LocationType = {
-  state: string;
-  city: string;
-  country: string;
-};
-
-export default function OnboardingModal({
-  isOpen,
-  onClose,
-  onComplete,
-}: OnboardingModalProps) {
+export default function OnboardingModal({ isOpen, onClose, onComplete }: OnboardingModalProps) {
   const [step, setStep] = useState<number>(1);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [location, setLocation] = useState<LocationType>({
+  const [location, setLocation] = useState<{
+    state: string;
+    city: string;
+    country: string;
+  }>({
     state: "",
     city: "",
     country: "India",
@@ -102,7 +96,7 @@ export default function OnboardingModal({
         },
         interests: selectedInterests,
       });
-      toast.success("Welcome to EventZ! 🎉");
+      toast.success("Welcome to Spott! 🎉");
       onComplete();
     } catch (error) {
       toast.error("Failed to complete onboarding");
@@ -148,11 +142,11 @@ export default function OnboardingModal({
                   <button
                     key={category.id}
                     onClick={() => toggleInterest(category.id)}
-                    className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
-                      selectedInterests.includes(category.id)
+                    type="button"
+                    className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${selectedInterests.includes(category.id)
                         ? "border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20"
                         : "border-border hover:border-purple-300"
-                    }`}
+                      }`}
                   >
                     <div className="text-2xl mb-2">{category.icon}</div>
                     <div className="text-sm font-medium">{category.label}</div>
@@ -193,7 +187,7 @@ export default function OnboardingModal({
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent>
-                      {indianStates.map((state) => (
+                      {indianStates.map((state: any) => (
                         <SelectItem key={state.isoCode} value={state.name}>
                           {state.name}
                         </SelectItem>
@@ -214,13 +208,13 @@ export default function OnboardingModal({
                     <SelectTrigger id="city" className="h-11 w-full">
                       <SelectValue
                         placeholder={
-                          location.state ? "Select city" : "State first"
+                          location.state ? "Select city" : "Select state first"
                         }
                       />
                     </SelectTrigger>
                     <SelectContent>
                       {cities.length > 0 ? (
-                        cities.map((city) => (
+                        cities.map((city: any) => (
                           <SelectItem key={city.name} value={city.name}>
                             {city.name}
                           </SelectItem>
@@ -259,6 +253,7 @@ export default function OnboardingModal({
               variant="outline"
               onClick={() => setStep(step - 1)}
               className="gap-2"
+              type="button"
             >
               <ArrowLeft className="w-4 h-4" />
               Back
@@ -268,12 +263,13 @@ export default function OnboardingModal({
             onClick={handleNext}
             disabled={loading}
             className="flex-1 gap-2"
+            type="button"
           >
             {loading
               ? "Completing..."
               : step === 2
-              ? "Complete Setup"
-              : "Continue"}
+                ? "Complete Setup"
+                : "Continue"}
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>

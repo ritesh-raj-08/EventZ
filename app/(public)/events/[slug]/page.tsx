@@ -29,6 +29,8 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getCategoryIcon, getCategoryLabel } from "@/lib/data";
 import RegisterModal from "./_components/register-modal";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import OnboardingModal from "@/components/ui/onboarding-modal";
 
 
 
@@ -79,6 +81,7 @@ export default function EventDetailPage() {
   const router = useRouter();
   const { user } = useUser();
   const [showRegisterModal, setShowRegisterModal] = useState<boolean>(false);
+  const { showOnboarding, handleOnboardingComplete, handleOnboardingSkip } = useOnboarding();
 
   // ✅ Safely normalize slug from params
   const rawSlug = params.slug;
@@ -400,6 +403,12 @@ export default function EventDetailPage() {
           onClose={() => setShowRegisterModal(false)}
         />
       )}
+
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleOnboardingSkip}
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 }

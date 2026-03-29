@@ -21,6 +21,8 @@ import {
 import Link from "next/link";
 import EventCard from "@/components/event-card";
 import { Doc } from "@/convex/_generated/dataModel";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import OnboardingModal from "@/components/ui/onboarding-modal";
 
 // Types
 interface Event {
@@ -48,6 +50,7 @@ interface Registration {
 export default function MyTicketsPage() {
   const router = useRouter();
   const [selectedTicket, setSelectedTicket] = useState<Registration | null>(null);
+  const { showOnboarding, handleOnboardingComplete, handleOnboardingSkip } = useOnboarding();
 
   const { data: registrations, loading } = useConvexQuery(
     api.registrations.getMyRegistrations
@@ -210,6 +213,12 @@ export default function MyTicketsPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleOnboardingSkip}
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 }
