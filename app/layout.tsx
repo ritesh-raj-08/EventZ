@@ -13,7 +13,11 @@ export const metadata: Metadata = {
   title: "Eventz - Find Your Vibe",
   description: "A dynamic event management platform.",
   icons: {
-    icon: "/EventZLogo.png",
+    icon: [
+      { url: "/EventzLogo.png", type: "image/png" },
+    ],
+    shortcut: ["/EventzLogo.png"],
+    apple: ["/EventzLogo.png"],
   },
 };
 

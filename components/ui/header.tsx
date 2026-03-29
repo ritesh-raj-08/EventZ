@@ -33,7 +33,7 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-3 py-1 flex items-center justify-between">
           <Link href="/" className="flex items-center ">
             <Image
-              src="/EventZLogo.png"
+              src="/EventzLogo.png"
               alt="Eventz logo"
               width={500}
               height={500}
