@@ -314,11 +314,6 @@ const categoriesWithCounts = CATEGORIES.map((category) => ({
     </Card>
       )}
 
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={handleOnboardingSkip}
-        onComplete={handleOnboardingComplete}
-      />
     </>
   )
 }

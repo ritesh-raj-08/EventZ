@@ -1,20 +1,23 @@
 "use client";
 
-import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-const ExploreLayout = ({ children }: { children: React.ReactNode }) => {
+type ExploreLayoutProps = {
+  children: React.ReactNode;
+};
+
+export default function ExploreLayout({ children }: ExploreLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const isMainExplorePage = pathname === "/explore";
+  const isMainExplore = pathname === "/explore";
 
   return (
     <div className="pb-16 min-h-screen">
       <div className="max-w-7xl mx-auto px-6">
-
-        {!isMainExplorePage && (
+        {/* Back Button for nested routes */}
+        {!isMainExplore && (
           <div className="mb-6">
             <Button
               variant="ghost"
@@ -28,10 +31,7 @@ const ExploreLayout = ({ children }: { children: React.ReactNode }) => {
         )}
 
         {children}
-
       </div>
     </div>
   );
-};
-
-export default ExploreLayout;
+}

@@ -26,14 +26,14 @@ import {
 } from "@/components/ui/select";
 import { CATEGORIES } from "@/lib/data";
 
-interface OnboardingModalProps {
+type OnboardingModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
-}
+};
 
 export default function OnboardingModal({ isOpen, onClose, onComplete }: OnboardingModalProps) {
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<"interests" | "location">("interests");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [location, setLocation] = useState<{
     state: string;
@@ -71,16 +71,16 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   };
 
   const handleNext = () => {
-    if (step === 1 && selectedInterests.length < 3) {
+    if (step === "interests" && selectedInterests.length < 3) {
       toast.error("Please select at least 3 interests");
       return;
     }
-    if (step === 2 && (!location.city || !location.state)) {
+    if (step === "location" && (!location.city || !location.state)) {
       toast.error("Please select both state and city");
       return;
     }
-    if (step < 2) {
-      setStep(step + 1);
+    if (step === "interests") {
+      setStep("location");
     } else {
       handleComplete();
     }
@@ -96,7 +96,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
         },
         interests: selectedInterests,
       });
-      toast.success("Welcome to Spott! 🎉");
+      toast.success("Welcome to EventZ! 🎉");
       onComplete();
     } catch (error) {
       toast.error("Failed to complete onboarding");
@@ -104,7 +104,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
     }
   };
 
-  const progress = (step / 2) * 100;
+  const progress = step === "interests" ? 50 : 100;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -114,7 +114,10 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
             <Progress value={progress} className="h-1" />
           </div>
           <DialogTitle className="flex items-center gap-2 text-2xl">
-            {step === 1 ? (
+            <div className="text-sm text-muted-foreground font-medium mb-2">
+              Step {step === "interests" ? "1" : "2"} of 2
+            </div>
+            {step === "interests" ? (
               <>
                 <Heart className="w-6 h-6 text-purple-500" />
                 What interests you?
@@ -127,15 +130,14 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
             )}
           </DialogTitle>
           <DialogDescription>
-            {step === 1
+            {step === "interests"
               ? "Select at least 3 categories to personalize your experience"
               : "We'll show you events happening near you"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          {/* Step 1: Select Interests */}
-          {step === 1 && (
+          {step === "interests" && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto p-2">
                 {CATEGORIES.map((category: any) => (
@@ -143,10 +145,11 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                     key={category.id}
                     onClick={() => toggleInterest(category.id)}
                     type="button"
-                    className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${selectedInterests.includes(category.id)
+                    className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
+                      selectedInterests.includes(category.id)
                         ? "border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20"
                         : "border-border hover:border-purple-300"
-                      }`}
+                    }`}
                   >
                     <div className="text-2xl mb-2">{category.icon}</div>
                     <div className="text-sm font-medium">{category.label}</div>
@@ -171,8 +174,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
             </div>
           )}
 
-          {/* Step 2: Location */}
-          {step === 2 && (
+          {step === "location" && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -248,10 +250,10 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
 
         {/* Actions */}
         <div className="flex gap-3 pt-4">
-          {step > 1 && (
+          {step === "location" && (
             <Button
               variant="outline"
-              onClick={() => setStep(step - 1)}
+              onClick={() => setStep("interests")}
               className="gap-2"
               type="button"
             >
@@ -267,7 +269,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
           >
             {loading
               ? "Completing..."
-              : step === 2
+              : step === "location"
                 ? "Complete Setup"
                 : "Continue"}
             <ArrowRight className="w-4 h-4" />

@@ -5,13 +5,12 @@ import { useMutation } from "convex/react";
 
 
 export const useConvexQuery = <T = any>(query: any, args?: any) => {
-    // Just use Convex's useQuery directly for true reactivity
     const result = useQuery(query, args);
-    
-    // Handle loading state
-    const isLoading = result === undefined;
-    
-    return { data: result, loading: isLoading, error: null };
+    // Convex returns undefined while loading AND when the query is skipped — treat skip as idle, not loading
+    const skipped = args === "skip";
+    const isLoading = !skipped && result === undefined;
+
+    return { data: skipped ? undefined : result, loading: isLoading, error: null };
 }
 
 export const useConvexMutation = (mutation: any, args?: any) => {

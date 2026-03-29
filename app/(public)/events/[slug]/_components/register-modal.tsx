@@ -25,8 +25,8 @@ interface Event {
   _id: string;
   title: string;
   ticketType: "free" | "paid";
-  ticketPrice?: number;
-  [key: string]: any;
+  price?: number;
+  [key: string]: unknown;
 }
 
 interface RegisterModalProps {
@@ -134,7 +134,7 @@ export default function RegisterModal({ event, isOpen, onClose }: RegisterModalP
                 "Free Event"
               ) : (
                 <span>
-                  Price: ₹{event.ticketPrice}{" "}
+                  Price: ₹{event.price ?? 0}{" "}
                   <span className="text-xs">(Pay at venue)</span>
                 </span>
               )}

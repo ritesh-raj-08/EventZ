@@ -87,18 +87,33 @@ export const completeOnboarding = mutation({
       )
       .unique();
 
+    let userId: Id<"users">;
+    
     if (!user) {
-      throw new Error("User not found");
+      // Auto-create user like store mutation
+      userId = await ctx.db.insert("users", {
+        name: identity.name ?? "Anonymous",
+        tokenIdentifier: identity.tokenIdentifier,
+        email: identity.email ?? "",
+        imageUrl: identity.pictureUrl,
+        hasCompletedOnboarding: false,
+        freeEventsCreated: 0,
+        isPro: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    } else {
+      userId = user._id;
     }
 
-    await ctx.db.patch(user._id, {
+    await ctx.db.patch(userId, {
       hasCompletedOnboarding: true,
       location: args.location,
       interests: args.interests,
       updatedAt: Date.now(),
     });
 
-    return user._id;
+    return userId;
   },
 });
 

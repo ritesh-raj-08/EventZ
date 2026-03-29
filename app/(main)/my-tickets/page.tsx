@@ -214,11 +214,6 @@ export default function MyTicketsPage() {
         </Dialog>
       )}
 
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={handleOnboardingSkip}
-        onComplete={handleOnboardingComplete}
-      />
     </div>
   );
 }

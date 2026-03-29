@@ -138,7 +138,7 @@ export default function CreateEventPage() {
   const [upgradeReason, setUpgradeReason] = useState<"limit" | "color">("limit");
 
   // Check if user has Pro plan
-  const { has, userId } = useAuth() as UseAuthReturn;
+  const { has, userId, isLoaded, isSignedIn } = useAuth() as UseAuthReturn;
   const hasPro = has?.({ plan: "pro" }) ?? false;
 
   const { data: currentUser } = useConvexQuery(api.users.getCurrentUser) as { data: User | undefined };
@@ -225,76 +225,83 @@ export default function CreateEventPage() {
       .replace(/^-+|-+$/g, "");
   };
 
-  const onSubmit = async (data: EventFormData): Promise<void> => {
-    try {
-      const start = combineDateTime(data.startDate, data.startTime);
-      const end = combineDateTime(data.endDate, data.endTime);
-
-      if (!start || !end) {
-        toast.error("Please select both date and time for start and end.");
-        return;
-      }
-      if (end.getTime() <= start.getTime()) {
-        toast.error("End date/time must be after start date/time.");
-        return;
-      }
-
-      // Check event limit for Free users
-      if (!hasPro && currentUser?.freeEventsCreated && currentUser.freeEventsCreated >= 1) {
-        setUpgradeReason("limit");
-        setShowUpgradeModal(true);
-        return;
-      }
-
-      // Check if trying to use custom color without Pro
-      if (data.themeColor !== "#1e3a8a" && !hasPro) {
-        setUpgradeReason("color");
-        setShowUpgradeModal(true);
-        return;
-      }
-
-      if (!userId) {
-        toast.error("You must be logged in to create an event");
-        return;
-      }
-
-      if (!currentUser) {
-        toast.error("User data not found");
-        return;
-      }
-
-      const now = Date.now();
-
-      const eventData = {
-        title: data.title,
-        description: data.description,
-        category: data.category,
-        tags: [data.category],
-        startTime: start.getTime(),
-        endTime: end.getTime(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        locationType: data.locationType,
-        venue: data.venue || undefined,
-        address: data.address || undefined,
-        city: data.city,
-        state: data.state || undefined,
-        country: data.country || "India",
-        capacity: data.capacity || 0,
-        ticketType: data.ticketType,
-        price: data.price || undefined,
-        coverImage: data.coverImage || undefined,
-        themeColor: data.themeColor,
-      };
-
-      await createEvent(eventData);
-
-      toast.success("Event created successfully! 🎉");
-      router.push("/my-events");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create event");
+const onSubmit = async (data: EventFormData): Promise<void> => {
+  try {
+    if (!isLoaded) {
+      toast.error("Authentication is still loading");
+      return;
     }
-  };
 
+    if (!isSignedIn || !userId) {
+      toast.error("You must be logged in to create an event");
+      return;
+    }
+
+    const start = combineDateTime(data.startDate, data.startTime);
+    const end = combineDateTime(data.endDate, data.endTime);
+
+    if (!start || !end) {
+      toast.error("Please select both date and time for start and end.");
+      return;
+    }
+
+    if (end.getTime() <= start.getTime()) {
+      toast.error("End date/time must be after start date/time.");
+      return;
+    }
+
+    // Check event limit for Free users
+    if (
+      !hasPro &&
+      currentUser?.freeEventsCreated &&
+      currentUser.freeEventsCreated >= 1
+    ) {
+      setUpgradeReason("limit");
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // Check if trying to use custom color without Pro
+    if (data.themeColor !== "#1e3a8a" && !hasPro) {
+      setUpgradeReason("color");
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error("User data not found");
+      return;
+    }
+
+    const eventData = {
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      tags: [data.category],
+      startTime: start.getTime(),
+      endTime: end.getTime(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      locationType: data.locationType,
+      venue: data.venue || undefined,
+      address: data.address || undefined,
+      city: data.city,
+      state: data.state || undefined,
+      country: data.country || "India",
+      capacity: data.capacity || 0,
+      ticketType: data.ticketType,
+      price: data.price || undefined,
+      coverImage: data.coverImage || undefined,
+      themeColor: data.themeColor,
+    };
+
+    await createEvent(eventData);
+
+    toast.success("Event created successfully! 🎉");
+    router.push("/my-events");
+  } catch (error: any) {
+    toast.error(error.message || "Failed to create event");
+  }
+};
   const handleAIGenerate = (generatedData: GeneratedEventData): void => {
     setValue("title", generatedData.title);
     setValue("description", generatedData.description);

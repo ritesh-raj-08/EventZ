@@ -37,7 +37,7 @@ export default function Header() {
               alt="Eventz logo"
               width={500}
               height={500}
-              className="w-full h-15 "
+              className="w-full h-15"
               priority
             />
             {hasPro && (
@@ -112,12 +112,6 @@ export default function Header() {
           </div>
         )}
       </nav>
-
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={handleOnboardingSkip}
-        onComplete={handleOnboardingComplete}
-      />
 
       <UpgradeModal
         isOpen={showUpgradeModal}

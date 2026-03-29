@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css";
@@ -7,17 +6,16 @@ import { ConvexClientProvider } from "./ConvexClientProvider";
 import { ClerkClientProvider } from "./ClerkClientProvider";
 import { Toaster } from "@/components/ui/sonner";
 import Footer from "@/components/ui/footer";
+import { GlobalOnboarding } from "@/components/global-onboarding";
 
 
 export const metadata: Metadata = {
   title: "Eventz - Find Your Vibe",
   description: "A dynamic event management platform.",
-  icons: {
-    icon: [
-      { url: "/EventzLogo.png", type: "image/png" },
-    ],
-    shortcut: ["/EventzLogo.png"],
-    apple: ["/EventzLogo.png"],
+  
+   icons: {
+  icon: "/EventzLogo.png",
+
   },
 };
 
@@ -42,10 +40,12 @@ export default function RootLayout({
           {/* header  */}
           <ClerkClientProvider>
             <ConvexClientProvider>
-
-
-
+              <GlobalOnboarding />
               <Header />
+              
+              {/* Global user storage to prevent race conditions */}
+              
+              
               <main className="container mx-auto pt-40 md:pt-30 py-8 min-h-screen">
                 {/* glow */}
                 <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -73,3 +73,4 @@ export default function RootLayout({
     </html>
   );
 }
+
