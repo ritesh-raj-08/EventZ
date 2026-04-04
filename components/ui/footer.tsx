@@ -42,10 +42,15 @@ export default function Footer() {
         </div>
       </div>
 
+
       {/* Bottom line */}
       <div className="text-center text-xs text-neutral-400 pb-4">
         © {new Date().getFullYear()} Eventz. All rights reserved.
       </div>
+      <div className="text-center text-xs text-neutral-600 pb-4">
+        Developed by Siddhant Raj & Ritesh Raj
+      </div>
+
     </footer>
   );
 }

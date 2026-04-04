@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Types
 interface QRScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,6 +35,9 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
   const [showAuthError, setShowAuthError] = useState<boolean>(false);
   const [authErrorMessage, setAuthErrorMessage] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const html5QrCodeRef = useRef<any>(null);
+  const isScannerRunning = useRef<boolean>(false);
+  const isStoppingRef = useRef<boolean>(false);
 
   const { mutate: checkInAttendee } = useConvexMutation(
     api.registrations.checkInAttendee
@@ -46,43 +48,34 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
       console.log(`📱 QR Code detected: ${qrCode}`);
       const result = await checkInAttendee({ qrCode }) as CheckInResult;
       console.log("🔍 Check-in result:", result);
-      console.log("Result message:", result.message);
 
       if (result.success) {
-        console.log("✅ Check-in successful! Closing modal...");
+        console.log("✅ Check-in successful!");
         toast.success("✅ Check-in successful!");
+        // Stop scanner before closing
+        await stopScanner();
         onClose();
       } else {
         console.log("⚠️ Check-in failed:", result.message);
         const messageLower = result.message?.toLowerCase() || "";
         
-        // Check for specific error cases in order of specificity
         if (messageLower.includes("invalid") || messageLower.includes("not found")) {
-          console.log("Invalid QR code detected");
           toast.error("❌ Invalid QR code. Please scan a valid attendee QR code.");
         } else if (messageLower.includes("already checked in")) {
-          console.log("Already checked in detected");
           setShowAlreadyCheckedIn(true);
         } else {
           toast.error(result.message || "Check-in failed");
         }
       }
     } catch (error: any) {
-      console.error("❌ Check-in error caught in modal:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error message:", error.message);
-      console.error("Error string:", String(error));
+      console.error("❌ Check-in error:", error);
       
-      // Handle different error types
       const errorMsg = (error.message || String(error) || "").toLowerCase();
-      console.log("Checking error message:", errorMsg);
       
       if (errorMsg.includes("not authorized") || errorMsg.includes("unauthorized")) {
-        console.log("Authorization error detected");
         setAuthErrorMessage("Only event organizers can check in attendees for their events.");
         setShowAuthError(true);
       } else if (errorMsg.includes("not found") || errorMsg.includes("invalid")) {
-        console.log("Invalid QR code error");
         toast.error("❌ Invalid QR code. Please scan a valid attendee QR code.");
       } else if (errorMsg.includes("network")) {
         toast.error("🌐 Network error. Please check your connection and try again.");
@@ -94,15 +87,102 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
     }
   };
 
+  const startScanner = async () => {
+    try {
+      // Don't start if already running or currently stopping
+      if (isScannerRunning.current || isStoppingRef.current) {
+        console.log("Scanner already running or stopping");
+        return;
+      }
+
+      setError(null);
+      const { Html5Qrcode } = await import("html5-qrcode");
+      
+      const config = {
+        fps: 30,
+        qrbox: { width: 300, height: 300 },
+        aspectRatio: 1.0,
+        videoConstraints: {
+          facingMode: "environment",
+        },
+      };
+
+      html5QrCodeRef.current = new Html5Qrcode("qr-reader-container");
+      
+      await html5QrCodeRef.current.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText: string) => {
+          console.log("QR Code detected:", decodedText);
+          handleCheckIn(decodedText);
+        },
+        (errorMessage: string) => {
+          // Ignore scanning errors
+          if (!errorMessage.includes("NotFoundException")) {
+            console.debug("Scan error:", errorMessage);
+          }
+        }
+      );
+      
+      isScannerRunning.current = true;
+      setScannerReady(true);
+    } catch (err: any) {
+      console.error("Failed to start scanner:", err);
+      
+      // Handle specific errors
+      if (err.name === 'NotAllowedError') {
+        setError("Camera permission denied. Please allow camera access in your browser settings.");
+      } else if (err.name === 'NotFoundError') {
+        setError("No camera found on this device.");
+      } else if (err.message?.includes("https")) {
+        setError("Camera requires HTTPS. Please use HTTPS connection.");
+      } else {
+        setError(err.message || "Failed to start camera");
+      }
+      isScannerRunning.current = false;
+    }
+  };
+
+  const stopScanner = async () => {
+    // Prevent multiple simultaneous stop attempts
+    if (isStoppingRef.current) {
+      console.log("Already stopping scanner");
+      return;
+    }
+
+    isStoppingRef.current = true;
+
+    try {
+      if (html5QrCodeRef.current) {
+        try {
+          await html5QrCodeRef.current.stop();
+          await html5QrCodeRef.current.clear();
+          console.log("Scanner stopped successfully");
+        } catch (err: any) {
+          // Ignore "not running" errors - this is expected in Strict Mode
+          if (!err.message?.includes("not running") && !err.message?.includes("paused")) {
+            console.error("Error stopping scanner:", err);
+          } else {
+            console.log("Scanner was already stopped");
+          }
+        }
+      }
+    } finally {
+      html5QrCodeRef.current = null;
+      isScannerRunning.current = false;
+      isStoppingRef.current = false;
+      setScannerReady(false);
+    }
+  };
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setUploadLoading(true);
     try {
-      // Dynamically import the library
       const { Html5Qrcode } = await import("html5-qrcode");
-
+      
       // Create a temporary container element
       const tempContainerId = "temp-qr-scanner-" + Date.now();
       const tempContainer = document.createElement("div");
@@ -129,116 +209,50 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
       }
     } catch (error: any) {
       console.error("Upload error:", error);
-      
-      // Handle different error types
-      const errorMsg = (error.message || "").toLowerCase();
-      
-      if (errorMsg.includes("not authorized") || errorMsg.includes("unauthorized") || errorMsg.includes("you are not authorized")) {
-        setAuthErrorMessage("Only event organizers can check in attendees for their events.");
-        setShowAuthError(true);
-      } else if (errorMsg.includes("file")) {
-        toast.error("📁 Invalid image file. Please try another image.");
-      } else if (errorMsg.includes("network")) {
-        toast.error("🌐 Network error. Please try again.");
-      } else if (errorMsg.includes("not authenticated")) {
-        toast.error("🔐 Session expired. Please log in again.");
-      } else {
-        toast.error("Failed to process image");
-      }
-      
+      toast.error("Failed to process image");
       setUploadLoading(false);
     }
   };
 
-  // Initialize QR Scanner
+  // Initialize scanner when modal opens
   useEffect(() => {
-    let scanner: any = null;
-    let mounted = true;
-
-    const initScanner = async () => {
-      if (!isOpen || useUploadMode) return;
-
-      try {
-        console.log("Initializing QR scanner...");
-
-        // Check if we're in a browser environment and mediaDevices API is available
-        if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          setError("Camera access is not supported in this browser or context. Please use a modern browser with HTTPS.");
-          return;
-        }
-
-        // Check camera permissions first
-        try {
-          await navigator.mediaDevices.getUserMedia({ video: true });
-          console.log("Camera permission granted");
-        } catch (permError: any) {
-          console.error("Camera permission denied:", permError);
-          setError("Camera permission denied. Please enable camera access.");
-          return;
-        }
-
-        // Dynamically import the library
-        const { Html5QrcodeScanner } = await import("html5-qrcode");
-
-        if (!mounted) return;
-
-        console.log("Creating scanner instance...");
-
-        scanner = new Html5QrcodeScanner(
-          "qr-reader",
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-            showTorchButtonIfSupported: true,
-            videoConstraints: {
-              facingMode: "environment", // Use back camera on mobile
-            },
-          },
-          /* verbose= */ false
-        );
-
-        const onScanSuccess = (decodedText: string) => {
-          console.log("QR Code detected:", decodedText);
-          if (scanner) {
-            scanner.clear().catch(console.error);
-          }
-          handleCheckIn(decodedText);
-        };
-
-        const onScanError = (error: string) => {
-          // Only log actual errors, not "no QR code found" messages
-          if (error && !error.includes("NotFoundException")) {
-            console.debug("Scan error:", error);
-          }
-        };
-
-        scanner.render(onScanSuccess, onScanError);
-        setScannerReady(true);
-        setError(null);
-        console.log("Scanner rendered successfully");
-      } catch (error: any) {
-        console.error("Failed to initialize scanner:", error);
-        setError(`Failed to start camera: ${error.message}`);
-        toast.error("Camera failed. Please use manual entry.");
-      }
-    };
-
-    initScanner();
-
-    return () => {
-      mounted = false;
-      if (scanner) {
-        console.log("Cleaning up scanner...");
-        scanner.clear().catch(console.error);
-      }
-      setScannerReady(false);
-    };
+    if (isOpen && !useUploadMode) {
+      // Small delay to ensure DOM is ready
+      const timeoutId = setTimeout(() => {
+        startScanner();
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      stopScanner();
+    }
   }, [isOpen, useUploadMode]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      stopScanner();
+      setScannerReady(false);
+      setError(null);
+      setUseUploadMode(false);
+      setUploadLoading(false);
+    }
+  }, [isOpen]);
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+          stopScanner();
+          onClose();
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -255,8 +269,12 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
             <Button
               variant={useUploadMode ? "outline" : "default"}
               size="sm"
-              onClick={() => setUseUploadMode(false)}
+              onClick={() => {
+                stopScanner();
+                setUseUploadMode(false);
+              }}
               className="flex-1"
+              type="button"
             >
               <QrCode className="w-4 h-4 mr-2" />
               Camera
@@ -264,8 +282,12 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
             <Button
               variant={useUploadMode ? "default" : "outline"}
               size="sm"
-              onClick={() => setUseUploadMode(true)}
+              onClick={() => {
+                stopScanner();
+                setUseUploadMode(true);
+              }}
               className="flex-1"
+              type="button"
             >
               <Upload className="w-4 h-4 mr-2" />
               Gallery
@@ -286,6 +308,7 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadLoading}
+                type="button"
                 className="w-full p-8 border-2 border-dashed border-purple-400 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-purple-600 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {uploadLoading ? (
@@ -307,12 +330,26 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
             // Camera Mode
             <>
               {error ? (
-                <div className="text-red-500 text-sm">{error}</div>
+                <div className="text-red-500 text-sm text-center p-4">
+                  {error}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setError(null);
+                      startScanner();
+                    }}
+                    className="mt-3"
+                    type="button"
+                    size="sm"
+                  >
+                    Retry
+                  </Button>
+                </div>
               ) : (
                 <>
                   <div
-                    id="qr-reader"
-                    className="w-full"
+                    id="qr-reader-container"
+                    className="w-full overflow-hidden rounded-lg"
                     style={{ minHeight: "350px" }}
                   ></div>
                   {!scannerReady && (
@@ -354,15 +391,17 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
               variant="outline"
               onClick={() => setShowAlreadyCheckedIn(false)}
               className="flex-1"
+              type="button"
             >
               Close
             </Button>
             <Button
               onClick={() => {
                 setShowAlreadyCheckedIn(false);
-                setUseUploadMode(false); // Reset to camera mode
+                setUseUploadMode(false);
               }}
               className="flex-1"
+              type="button"
             >
               Scan Another
             </Button>
@@ -392,6 +431,7 @@ export default function QRScannerModal({ isOpen, onClose, eventId }: QRScannerMo
           <Button
             onClick={() => setShowAuthError(false)}
             className="w-full"
+            type="button"
           >
             Close
           </Button>
